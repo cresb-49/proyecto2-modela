@@ -1,0 +1,22 @@
+# Archivos de caché y compilación
+*.utf8.md
+*.knit.md
+*.Rproj.user/
+*.html
+*.docx
+*.pdf
+*_cache/
+*_files/
+.Rhistory
+.RData
+.Ruserdata
+
+# Archivos temporales de RStudio y proyectos
+.Rproj.user/
+
+# Publicaciones en RPubs o ShinyApps (metadatos locales)
+*.dcf
+*.deploy
+
+# Archivos zip si haces entregas en Classroom o similares
+*.zip

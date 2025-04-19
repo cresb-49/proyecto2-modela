@@ -1,0 +1,209 @@
+---
+title: "Proyecto: Resumen del dataset starwars del paquete dplyr"
+author: "Carlos Pac"
+date: "28/04/2025"
+output: html_document
+---
+
+```{r, echo=FALSE}
+library(dplyr)
+library(ggplot2)
+data("starwars")
+```
+
+# Descripción de los datos
+
+El conjunto de datos `starwars` contiene información sobre 87 personajes del universo ficticio de Star Wars. Cada fila representa un personaje, y las columnas incluyen datos físicos (altura, peso, color de piel), biográficos (sexo, género, planeta de origen) y de participación en la saga (películas, vehículos y naves en las que aparece).
+
+## Fuente del conjunto de datos `starwars` y paquetes relacionados
+
+El conjunto de datos `starwars` incluido en el paquete `dplyr` del ecosistema `tidyverse` contiene información sobre personajes del universo de Star Wars. Este dataset fue creado con fines educativos y está basado en datos recopilados públicamente de fuentes como la [Star Wars API (SWAPI)](https://swapi.py4e.com/). Está estructurado como un `tibble` y preparado para ser utilizado directamente en análisis sin necesidad de limpieza previa.
+
+### Relación con otros paquetes
+
+- **`starwarsdb`**: Este paquete proporciona una estructura relacional más completa de los datos de Star Wars, dividiéndolos en múltiples tablas (`films`, `people`, `planets`, etc.). Fue construido también a partir de SWAPI y está diseñado para enseñar principios de bases de datos relacionales en R. Además, permite utilizar los datos como una base de datos DuckDB local.
+
+- **`rwars`** (no en CRAN): Otro paquete orientado a facilitar el acceso en tiempo real a SWAPI desde R. Fue desarrollado con un enfoque en llamadas a API en lugar de análisis preprocesado.
+
+Ambos comparten origen en la misma fuente (SWAPI), pero sirven a propósitos distintos dentro del entorno de R.
+
+### Tamaño del dataset
+- **Filas (observaciones):** 87 personajes  
+- **Columnas (variables):** 14  
+
+### Tipos de variables
+- Variables numéricas: `height`, `mass`, `birth_year`
+- Variables categóricas: `hair_color`, `skin_color`, `eye_color`, `sex`, `gender`, `homeworld`, `species`
+- Variables listas: `films`, `vehicles`, `starships` (listas de strings con nombres)
+
+### Período de observación (birth_year)
+La variable `birth_year` indica el año de nacimiento de los personajes en relación al evento "Battle of Yavin":
+- **Mínimo:** 8 ABY (After)
+- **Máximo:** 896 BBY (Before)
+
+### Valores perdidos
+Varias columnas contienen valores faltantes (`NA`). A continuación se muestra un resumen:
+
+Variable | Cantidad de NA
+-------- | ----------------
+height   | 6
+mass     | 28
+birth_year | 44
+hair_color | algunos
+films    | 0
+vehicles | muchos (listas vacías)
+starships | muchos (listas vacías)
+
+**Observación:**  
+- `mass` y `birth_year` tienen muchos valores faltantes posiblemente porque hay personajes con poca información oficial.  
+- Las variables tipo lista como `vehicles` y `starships` tienen estructuras vacías para personajes que no usan medios de transporte propios.  
+- Los `NA` en `hair_color` pueden deberse a especies sin cabello (como droides o criaturas alienígenas).
+
+---
+
+### Tabla resumen de variables
+
+Variable | Descripción
+-------- | ---------------------------------------------
+name     | Nombre del personaje
+height   | Altura en centímetros
+mass     | Peso en kilogramos
+hair_color | Color de cabello del personaje
+skin_color | Color de piel
+eye_color  | Color de ojos
+birth_year | Año de nacimiento según cronología ficticia
+sex        | Sexo biológico (male, female, none)
+gender     | Identidad de género (masculine, feminine, none)
+homeworld  | Planeta de origen
+species    | Especie del personaje (Human, Droid, etc.)
+films      | Lista de películas en las que aparece
+vehicles   | Lista de vehículos que ha conducido
+starships  | Lista de naves espaciales piloteadas
+
+# Visualizaciones de datos
+
+## Grafico #1
+```{r, echo=TRUE}
+birth_na <- starwars %>%
+  mutate(has_birthyear = ifelse(is.na(birth_year), "Desconocido", "Registrado"))
+
+ggplot(birth_na, aes(x = has_birthyear, fill = has_birthyear)) +
+  geom_bar(width = 0.6, color = "white", alpha = 0.9) +
+  geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 5, fontface = "bold") +
+  scale_fill_manual(values = c("Desconocido" = "#D95F02", "Registrado" = "#1B9E77")) +
+  labs(
+    title = "Disponibilidad del año de nacimiento",
+    subtitle = "En el universo de personajes de Star Wars",
+    x = NULL,
+    y = "Cantidad"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 13, hjust = 0.5),
+    axis.text = element_text(size = 12),
+    axis.title.y = element_text(margin = margin(r = 10))
+  ) +
+  guides(fill = "none")
+```
+
+**Interpretación del gráfico:**
+
+El gráfico muestra que hay una cantidad casi equilibrada de personajes con año de nacimiento **registrado (43)** y **desconocido (44)**. Esto sugiere que, aunque hay muchos personajes documentados en el universo de Star Wars, **no todos cuentan con datos completos**.
+
+Una posible explicación es que los personajes que tienen mayor protagonismo o relevancia narrativa tienden a tener más datos disponibles, mientras que los personajes secundarios, criaturas, o entidades con apariciones menores **no tienen tanta información registrada**, como es el caso de muchos droides, extraterrestres o personajes de fondo.
+
+Este patrón refleja cómo la visibilidad y la importancia de un personaje podrían estar relacionadas con la **cantidad de atributos biográficos** que conocemos sobre ellos.
+
+**Análisis previo: cantidad de películas por personaje**
+
+```{r, echo=FALSE}
+starwars %>%
+  mutate(
+    num_films = lengths(films),
+    has_birthyear = !is.na(birth_year)
+  ) %>%
+  group_by(has_birthyear) %>%
+  summarise(
+    Promedio_peliculas = mean(num_films),
+    Max_peliculas = max(num_films),
+    Min_peliculas = min(num_films)
+  )
+```
+
+Este análisis muestra que los personajes con año de nacimiento **registrado** participan en más películas en promedio (2.67 frente a 1.32) y también alcanzan un máximo de 7 películas, mientras que los del grupo **desconocido** no superan las 3 apariciones.
+
+Esta diferencia sugiere que los personajes más relevantes dentro de la narrativa —aquellos que aparecen en más películas— tienden a tener mayor información biográfica documentada, como su año de nacimiento. Este patrón será visualizado y confirmado en el gráfico de caja a continuación.
+
+
+```{r, echo=TRUE}
+starwars %>%
+  mutate(
+    num_films = lengths(films),
+    has_birthyear = ifelse(is.na(birth_year), "Desconocido", "Registrado")
+  ) %>%
+  ggplot(aes(x = has_birthyear, y = num_films, fill = has_birthyear)) +
+  geom_boxplot() +
+  labs(title = "Películas por personaje según disponibilidad de año de nacimiento",
+       x = "Año de nacimiento",
+       y = "Cantidad de películas") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Desconocido" = "#D95F02", "Registrado" = "#1B9E77")) +
+  guides(fill = "none")
+
+```
+**Interpretación del gráfico:**
+
+Este gráfico de caja muestra la cantidad de películas en las que participan los personajes, comparando aquellos que tienen año de nacimiento **registrado** con los que no.
+
+Se puede observar que los personajes con año de nacimiento registrado tienden a aparecer en **más películas en promedio** que aquellos con año de nacimiento desconocido. Además, la mediana del grupo "Registrado" es visiblemente mayor que la del grupo "Desconocido", lo cual refuerza la hipótesis inicial.
+
+Esto sugiere que los personajes **más importantes o recurrentes** en la saga suelen tener **más información biográfica documentada**, como su fecha de nacimiento. En cambio, los personajes secundarios o con menor relevancia narrativa suelen carecer de este tipo de detalles, lo que respalda la idea inicial que la **completitud de los datos está correlacionada con la prominencia del personaje en la saga**.
+
+## Grafico #2
+```{r, echo=TRUE}
+ggplot(
+  data = starwars %>% filter(!is.na(height), !is.na(mass), !is.na(species)),
+  aes(x = height, y = mass, color = species)
+) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(
+    title = "Altura vs Peso según especie",
+    subtitle = "Relación entre características físicas por especie",
+    x = "Altura (cm)",
+    y = "Peso (kg)",
+    color = "Especie"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5),
+    legend.position = "right", # Mueve la leyenda a la derecha
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 10)
+  ) +
+  guides(color = guide_legend(ncol = 2, byrow = TRUE))
+
+```
+
+**Interpretación del gráfico:**
+
+El gráfico de dispersión muestra la relación entre la **altura** y el **peso** de los personajes del universo Star Wars, categorizados por **especie** mediante el color.
+
+Se observa una fuerte concentración de personajes en un rango de altura entre **150 y 200 cm**, y peso entre **50 y 120 kg**, lo cual sugiere que la mayoría de las especies humanoides comparten proporciones físicas similares. Esto incluye especies como los **humanos**, **mirialan**, **twi'lek** y **zabrak**, entre otras.
+
+También destaca un **outlier vertical importante**: un personaje de gran altura y peso —probablemente **Jabba el Hutt**— con un peso superior a los **1000 kg**, lo que indica que algunas especies tienen características físicas extremadamente distintas y afectan la escala visual del gráfico.
+
+``` {r, echo=FALSE}
+starwars %>%
+  filter(!is.na(height), !is.na(mass), !is.na(species)) %>%
+  group_by(species) %>%
+  summarise(
+    `Promedio altura (cm)` = round(mean(height), 1),
+    `Promedio peso (kg)` = round(mean(mass), 1),
+    `Máx altura (cm)` = max(height),
+    `Máx peso (kg)` = max(mass)
+  ) %>%
+  arrange(desc(`Promedio altura (cm)`)) %>%
+  print(n = Inf)
+```
